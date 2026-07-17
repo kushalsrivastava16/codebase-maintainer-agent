@@ -194,6 +194,18 @@
   <!-- Sidebar -->
   <aside class="sidebar">
 
+    <!-- Repository selector -->
+    <div class="sidebar-section">
+      <h3>Repository</h3>
+      <label for="repoPathInput">Path on server (leave blank for this project)</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="text" id="repoPathInput" placeholder="/absolute/path/to/repo" style="flex:1"
+               onkeydown="if(event.key==='Enter')applyRepoPath()"/>
+        <button class="task-btn" style="white-space:nowrap;padding:7px 10px;margin-top:0" onclick="applyRepoPath()" title="Load files from this path">↺</button>
+      </div>
+      <div id="repoStatus" style="font-size:11px;margin-top:5px;color:var(--muted);font-family:var(--font-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+    </div>
+
     <div class="sidebar-section">
       <h3>Task Configuration</h3>
       <div class="task-grid" id="taskGrid">
@@ -284,6 +296,7 @@
 
 <script>
 let currentTask = 'lint_fix';
+let currentRepoPath = '';   // '' = this project; absolute path = external repo
 let activeEventSource = null;
 let lastStats = { tokens: 0, cost: 0, calls: 0 };
 
@@ -295,18 +308,44 @@ async function init() {
 }
 
 // ---------------------------------------------------------------------------
+// Repository path
+// ---------------------------------------------------------------------------
+async function applyRepoPath() {
+  currentRepoPath = document.getElementById('repoPathInput').value.trim();
+  await loadFiles();
+}
+
+// ---------------------------------------------------------------------------
 // File loader
 // ---------------------------------------------------------------------------
 async function loadFiles() {
+  const statusEl = document.getElementById('repoStatus');
   try {
-    const r = await fetch('/api/files');
-    const { files } = await r.json();
+    const url = currentRepoPath
+      ? `/api/files?repo=${encodeURIComponent(currentRepoPath)}`
+      : '/api/files';
+    const r = await fetch(url);
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ detail: r.statusText }));
+      statusEl.style.color = 'var(--red)';
+      statusEl.textContent = `Error: ${err.detail}`;
+      return;
+    }
+    const { files, repo_root } = await r.json();
+    statusEl.style.color = 'var(--muted)';
+    statusEl.textContent = `Root: ${repo_root}`;
     const sel = document.getElementById('targetSelect');
-    sel.innerHTML = files.map(f => `<option value="${f}">${f}</option>`).join('');
-    // Default to the lint errors fixture if present
-    const def = files.find(f => f.includes('utils_with_lint_errors'));
-    if (def) sel.value = def;
+    sel.innerHTML = files.length
+      ? files.map(f => `<option value="${f}">${f}</option>`).join('')
+      : '<option value="">No .py files found</option>';
+    // Default to the lint errors fixture for the built-in project
+    if (!currentRepoPath) {
+      const def = files.find(f => f.includes('utils_with_lint_errors'));
+      if (def) sel.value = def;
+    }
   } catch(e) {
+    statusEl.style.color = 'var(--red)';
+    statusEl.textContent = `Error: ${e.message}`;
     document.getElementById('targetSelect').innerHTML = '<option>Error loading files</option>';
   }
 }
@@ -405,6 +444,7 @@ async function runTask() {
   const body = { task: currentTask, target, verbose: true };
   const apiKey = document.getElementById('apiKeyInput').value.trim();
   if (apiKey) body.api_key = apiKey;
+  if (currentRepoPath) body.repo_path = currentRepoPath;
   if (currentTask === 'generate_tests') {
     body.coverage_report = document.getElementById('coverageInput').value || 'coverage.json';
   }

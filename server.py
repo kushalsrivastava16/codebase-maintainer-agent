@@ -61,22 +61,24 @@ class RunRequest(BaseModel):
     verbose: bool = True
     max_tokens: int | None = None
     coverage_report: str | None = None
-    api_key: str | None = None  # ANTHROPIC_API_KEY, passed to subprocess env
+    api_key: str | None = None   # ANTHROPIC_API_KEY, passed to subprocess env
+    repo_path: str | None = None  # absolute path to an external repo; None = this project
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _list_py_files() -> list[str]:
-    """Return repo-relative paths of all .py files (excluding venv/cache)."""
-    EXCLUDE = {".venv", "venv", "__pycache__", ".git", ".pytest_cache"}
+def _list_py_files(base: Path | None = None) -> list[str]:
+    """Return repo-relative paths of all .py files under base (default: this project)."""
+    EXCLUDE = {".venv", "venv", "__pycache__", ".git", ".pytest_cache", ".tox", "node_modules"}
+    root = base or BASE_DIR
     result = []
-    for p in sorted(BASE_DIR.rglob("*.py")):
-        parts = set(p.relative_to(BASE_DIR).parts)
+    for p in sorted(root.rglob("*.py")):
+        parts = set(p.relative_to(root).parts)
         if parts & EXCLUDE:
             continue
-        result.append(str(p.relative_to(BASE_DIR)).replace("\\", "/"))
+        result.append(str(p.relative_to(root)).replace("\\", "/"))
     return result
 
 
@@ -97,13 +99,17 @@ def _read_history() -> list[dict]:
         return []
 
 
-def _run_agent_thread(run_id: str, cmd: list[str], extra_env: dict | None = None) -> None:
+def _run_agent_thread(
+    run_id: str,
+    cmd: list[str],
+    extra_env: dict | None = None,
+    cwd: str | None = None,
+) -> None:
     """Run the agent in a background thread, buffering all output for SSE replay.
 
-    Using a thread (not asyncio subprocess) because on Windows the default
-    uvicorn event loop is SelectorEventLoop which does not support
-    asyncio.create_subprocess_exec — ProactorEventLoop would be required.
-    Threads + blocking subprocess work everywhere without event-loop concerns.
+    cwd defaults to BASE_DIR (this project). Pass an external repo path to run
+    the agent against a different codebase — the agent uses Path.cwd() as its
+    repo_root, so changing cwd is all that's needed.
     """
     _run_logs[run_id] = []
     _run_status[run_id] = "running"
@@ -115,7 +121,7 @@ def _run_agent_thread(run_id: str, cmd: list[str], extra_env: dict | None = None
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,  # merge stderr into stdout for simplicity
-            cwd=str(BASE_DIR),
+            cwd=cwd or str(BASE_DIR),
             text=True,
             encoding="utf-8",
             errors="replace",
@@ -164,8 +170,21 @@ async def index():
 
 
 @app.get("/api/files")
-async def list_files():
-    return {"files": _list_py_files()}
+async def list_files(repo: str | None = Query(None)):
+    """List .py files in the project (default) or in an external repository.
+
+    Pass ?repo=/absolute/path/to/repo to scan a different codebase.
+    Returns {files: [...], repo_root: "..."} so the UI can show which root
+    is active.
+    """
+    if repo:
+        repo_path = Path(repo)
+        if not repo_path.exists():
+            raise HTTPException(400, f"Path does not exist: {repo}")
+        if not repo_path.is_dir():
+            raise HTTPException(400, f"Path is not a directory: {repo}")
+        return {"files": _list_py_files(repo_path), "repo_root": str(repo_path)}
+    return {"files": _list_py_files(), "repo_root": str(BASE_DIR)}
 
 
 @app.get("/api/history")
@@ -221,8 +240,16 @@ async def run_task(req: RunRequest):
     if req.api_key:
         extra_env = {"ANTHROPIC_API_KEY": req.api_key}
 
+    # Resolve external repo path (None = use this project)
+    cwd: str | None = None
+    if req.repo_path:
+        rp = Path(req.repo_path)
+        if not rp.exists() or not rp.is_dir():
+            raise HTTPException(400, f"Repository path does not exist: {req.repo_path}")
+        cwd = str(rp)
+
     # Fire-and-forget in a daemon thread — frontend streams via /api/stream/{run_id}
-    t = threading.Thread(target=_run_agent_thread, args=(run_id, cmd, extra_env), daemon=True)
+    t = threading.Thread(target=_run_agent_thread, args=(run_id, cmd, extra_env, cwd), daemon=True)
     t.start()
     return {"run_id": run_id}
 
