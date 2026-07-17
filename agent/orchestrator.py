@@ -432,9 +432,12 @@ class Orchestrator:
             with tempfile.TemporaryDirectory() as workspace:
                 tmp_file = Path(workspace) / f"proposed{suffix}"
                 tmp_file.write_text(content, encoding="utf-8")
-                # Safe fixes only (no --unsafe-fixes) to avoid surprising changes
+                # Apply safe fixes first, then unsafe fixes.
+                # F841 (unused local variable) is marked "unsafe" because ruff
+                # cannot prove the RHS has no side effects, but for dead
+                # assignments like `x = 42` it is always safe to remove.
                 subprocess.run(
-                    ["ruff", "check", "--fix", str(tmp_file)],
+                    ["ruff", "check", "--fix", "--unsafe-fixes", str(tmp_file)],
                     capture_output=True,
                     text=True,
                 )
