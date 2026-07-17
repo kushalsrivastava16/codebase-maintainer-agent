@@ -1,0 +1,340 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Project scaffolding and pyproject.toml": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310019497
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310040967
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310167578
+      }
+    ],
+    "2. Core data models (agent/protocols.py)": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310025426
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310178894
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310416487
+      }
+    ],
+    "3. Structured logger (agent/logger.py)": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310026307
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310421417
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310572318
+      }
+    ],
+    "4. Configuration loader (agent/config.py)": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310026414
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310577128
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310838889
+      }
+    ],
+    "5. File Reader tool (agent/tools/file_reader.py)": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310026528
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310843940
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310985169
+      }
+    ],
+    "6. Lint Runner tool (agent/tools/lint_runner.py)": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310026643
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310991040
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784311172647
+      }
+    ],
+    "7. Diff Writer (agent/diff_writer.py)": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310026743
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784311177723
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784311334736
+      }
+    ],
+    "8. Cost Tracker (agent/cost_tracker.py)": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310026846
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784311341440
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784311532588
+      }
+    ],
+    "9. Core Orchestrator (agent/orchestrator.py)": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310026948
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784311539885
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784311828431
+      }
+    ],
+    "10. CLI entry point (agent/__main__.py)": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310027054
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784311833735
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784312091319
+      }
+    ],
+    "11. End-to-end lint_fix integration test": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310027163
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784312099074
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784312312051
+      }
+    ],
+    "12. TODO Scanner tool (agent/tools/todo_scanner.py)": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310027276
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784312317327
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784312488628
+      }
+    ],
+    "13. Coverage Reader tool (agent/tools/coverage_reader.py)": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310027374
+      },
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784312493877
+      }
+    ],
+    "14. Orchestration comparison doc (docs/orchestration_comparison.md)": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310027501
+      }
+    ],
+    "15. Memory Store (agent/memory.py)": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310027592
+      }
+    ],
+    "16. Self-correction loop integration into Orchestrator": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310027694
+      }
+    ],
+    "17. Memory deduplication integration into CLI": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310027801
+      }
+    ],
+    "18. Test generation task support": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310027895
+      }
+    ],
+    "19. TODO conversion task support": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310028003
+      }
+    ],
+    "20. GitHub Client tool (agent/tools/github_client.py)": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310028136
+      }
+    ],
+    "21. Issue Triage agent (agent/triage.py)": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310028241
+      }
+    ],
+    "22. triage_issues task type wiring": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310028331
+      }
+    ],
+    "23. Token budgeting full integration": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310028435
+      }
+    ],
+    "24. Sandbox implementation (agent/sandbox.py)": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310028524
+      }
+    ],
+    "25. Dockerfile.sandbox": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310028603
+      }
+    ],
+    "26. Sandbox integration into self-correction loop": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310028699
+      }
+    ],
+    "27. Eval Harness (agent/eval/harness.py)": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310028795
+      }
+    ],
+    "28. Eval CLI command (agent/__main__.py eval subcommand)": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310028892
+      }
+    ],
+    "29. Benchmark suite (benchmarks/benchmark_suite.yaml)": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310028985
+      }
+    ],
+    "30. README with engineering documentation": [
+      {
+        "executionId": "5ff5d906-b644-450b-8cc4-55109d6ec91d",
+        "chatSessionId": "sess_284411fd-abf5-49f1-be81-83c80cbdbdec",
+        "timestamp": 1784310029065
+      }
+    ]
+  }
+}

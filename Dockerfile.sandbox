@@ -1,0 +1,17 @@
+FROM python:3.11-slim
+
+WORKDIR /workspace
+
+# Install dependencies at build time (no network at runtime)
+COPY pyproject.toml .
+RUN pip install --no-cache-dir anthropic httpx click PyYAML pytest pytest-cov ruff
+
+# Copy source for test execution
+COPY agent/ /agent/
+
+# Run as non-root user
+RUN useradd -m sandbox
+USER sandbox
+
+# Default: run pytest on the workspace
+CMD ["pytest", "/workspace", "--tb=short", "-q"]

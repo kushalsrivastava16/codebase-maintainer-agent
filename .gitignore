@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+agent_output/*.diff
+agent_output/*.json
+eval_results/*.json
+agent_memory.db
+agent_memory.db.corrupt.*
+coverage.json
+.coverage
+*.egg-info/
+dist/
+build/

@@ -1,0 +1,13 @@
+﻿# Codebase Maintainer Agent â€” Example Configuration
+# All fields have defaults; this file is optional.
+
+max_tokens_per_task: 50000       # abort if exceeded per task run
+max_iterations: 10               # abort if LLM loop exceeds this
+output_dir: ./agent_output       # where diffs and metadata are written
+memory_db: ./agent_memory.db     # SQLite database path
+sandbox_enabled: false           # set true to require Docker
+sandbox_timeout_seconds: 120     # container kill timeout
+dedup_window_hours: 24           # skip re-running successful tasks within this window
+log_level: INFO                  # DEBUG | INFO | WARNING | ERROR
+model: claude-haiku-4-5-20251001          # Anthropic model ID
+github_repo: null                # required for triage_issues, e.g. "owner/repo"

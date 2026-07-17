@@ -1,0 +1,117 @@
+# Codebase Maintainer Agent — Benchmark Suite
+#
+# Loaded by agent/eval/harness.py (EvalHarness._load_benchmark).
+# All target_path values are relative to the repository root.
+#
+# pass_criteria:
+#   diff_contains_all  — the generated .diff file must contain every string in
+#                        expected_diff_contains (used when we know exactly what
+#                        the fix should look like)
+#   lint_clean_after   — apply the diff to a temp copy of the file and run
+#                        `ruff check` + `ruff format --check`; both must exit 0
+#   tests_pass_after   — apply the diff to a temp copy and run pytest; must exit 0
+#
+# For triage_issues tasks, target_path is "." (repository root) because the task
+# is GitHub-based and does not operate on a single file.
+
+tasks:
+
+  # ── lint_fix benchmarks ────────────────────────────────────────────────────
+
+  - id: lint_fix_utils_unused_import
+    task_type: lint_fix
+    target_path: tests/fixtures/utils_with_lint_errors.py
+    expected_diff_contains:
+      - "-import json"
+    pass_criteria: lint_clean_after
+
+  - id: lint_fix_utils_unused_var
+    task_type: lint_fix
+    target_path: tests/fixtures/utils_with_lint_errors.py
+    expected_diff_contains:
+      - "-    unused_var = 42"
+    pass_criteria: lint_clean_after
+
+  - id: lint_fix_models_unused_imports
+    task_type: lint_fix
+    target_path: tests/fixtures/models_with_errors.py
+    expected_diff_contains:
+      - "-import"
+    pass_criteria: lint_clean_after
+
+  - id: lint_fix_models_long_lines
+    task_type: lint_fix
+    target_path: tests/fixtures/models_with_errors.py
+    expected_diff_contains:
+      - "+"
+    pass_criteria: lint_clean_after
+
+  - id: lint_fix_clean_file_noop
+    task_type: lint_fix
+    target_path: tests/fixtures/clean_file.py
+    expected_diff_contains: []
+    pass_criteria: lint_clean_after
+
+  # ── generate_tests benchmarks ──────────────────────────────────────────────
+
+  - id: gen_tests_calculator_add
+    task_type: generate_tests
+    target_path: tests/fixtures/calculator.py
+    expected_diff_contains:
+      - "def test_add"
+      - "assert"
+    pass_criteria: tests_pass_after
+
+  - id: gen_tests_calculator_divide_zero
+    task_type: generate_tests
+    target_path: tests/fixtures/calculator.py
+    expected_diff_contains:
+      - "def test_divide"
+      - "ValueError"
+    pass_criteria: tests_pass_after
+
+  - id: gen_tests_calculator_full_coverage
+    task_type: generate_tests
+    target_path: tests/fixtures/calculator.py
+    expected_diff_contains:
+      - "def test_add"
+      - "def test_subtract"
+      - "def test_multiply"
+      - "def test_divide"
+    pass_criteria: tests_pass_after
+
+  # ── convert_todos benchmarks ───────────────────────────────────────────────
+
+  - id: convert_todos_actionable
+    task_type: convert_todos
+    target_path: tests/fixtures/todo_sample.py
+    expected_diff_contains:
+      - "implement input validation"
+    pass_criteria: diff_contains_all
+
+  - id: convert_todos_skip_ambiguous
+    task_type: convert_todos
+    target_path: tests/fixtures/todo_sample.py
+    expected_diff_contains:
+      - "refactor this function"
+    pass_criteria: diff_contains_all
+
+  # ── triage_issues benchmarks ───────────────────────────────────────────────
+  # target_path is "." because triage_issues fetches open GitHub issues
+  # via GitHubClient; it does not operate on a local file.
+  # These tasks require GITHUB_TOKEN and github_repo to be configured.
+
+  - id: triage_issues_open_bugs
+    task_type: triage_issues
+    target_path: "."
+    expected_diff_contains:
+      - "priority"
+      - "type"
+    pass_criteria: diff_contains_all
+
+  - id: triage_issues_label_assignment
+    task_type: triage_issues
+    target_path: "."
+    expected_diff_contains:
+      - "agent-triaged"
+    pass_criteria: diff_contains_all
