@@ -137,6 +137,13 @@ def _run_agent_thread(
         env = os.environ.copy()
         if extra_env:
             env.update(extra_env)
+        # Always make the agent package importable, even when cwd is an external repo
+        existing_pythonpath = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = (
+            str(BASE_DIR) + os.pathsep + existing_pythonpath
+            if existing_pythonpath
+            else str(BASE_DIR)
+        )
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
