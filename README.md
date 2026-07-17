@@ -1,13 +1,64 @@
 ﻿# Codebase Maintainer Agent
 
-An autonomous Python agent that performs software maintenance tasks â€” lint fixing, test
-generation, TODO conversion, and issue triage â€” against a Python repository. It proposes
+An autonomous Python agent that performs software maintenance tasks — lint fixing, test
+generation, TODO conversion, and issue triage — against a Python repository. It proposes
 changes as unified diffs rather than applying them directly, keeping a human in the loop
 for every change.
 
 Built in five incremental phases to demonstrate agent engineering patterns: tool dispatch,
 self-correction loops, prompt injection mitigation, cost control, SQLite-backed memory,
 Docker sandboxing, and a full evaluation harness.
+
+---
+
+## Live Demo
+
+**[https://codebase-maintainer-agent-1.onrender.com/](https://codebase-maintainer-agent-1.onrender.com/)**
+
+Paste any public GitHub repo URL → the agent clones it, lists all Python files, and lets
+you run lint fix, test generation, or TODO conversion on any file — with real-time log
+streaming and a built-in diff viewer.
+
+> The demo uses Render's free tier. If the service is cold-starting, the first request may
+> take ~30 seconds. Bring your own Anthropic API key (paste it in the UI — it is never stored).
+
+---
+
+## Web UI
+
+The project ships a FastAPI + SSE web interface alongside the CLI.
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Set your key
+export ANTHROPIC_API_KEY=”sk-ant-...”
+
+# Start the server
+uvicorn server:app --reload --port 8000
+# Open http://localhost:8000
+```
+
+**Features:**
+- Paste a GitHub URL → one-click clone (shallow, depth=1) of any public repo
+- File dropdown auto-populates from the cloned repo's Python files
+- Real-time log streaming via Server-Sent Events — see every LLM call, tool dispatch, and token count live
+- Built-in diff viewer with syntax-highlighted additions/deletions
+- Task history sidebar backed by SQLite
+- Token + cost counter per run
+
+**API endpoints** (full reference in [PROJECT_GUIDE.md](PROJECT_GUIDE.md)):
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/clone` | Clone a GitHub repo, return file list |
+| `POST` | `/api/run` | Start a task, returns `run_id` |
+| `GET` | `/api/stream/{run_id}` | SSE log stream for a run |
+| `GET` | `/api/files` | List .py files (optional `?repo=` path) |
+| `GET` | `/api/history` | Last 50 task runs from SQLite |
+| `GET` | `/api/diffs` | List generated diff files |
+| `GET` | `/api/diff?name=` | Fetch a specific diff |
 
 ---
 
