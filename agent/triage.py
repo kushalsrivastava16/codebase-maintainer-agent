@@ -94,8 +94,20 @@ class TriageAgent:
             return
 
         issues: list[dict] = json.loads(result.content)
-        # Process in a deterministic, ascending order so logs are easy to follow.
         issues.sort(key=lambda i: i["issue_number"])
+
+        pending = [i for i in issues if TRIAGE_LABEL not in i.get("labels", [])]
+        self._logger.log(
+            "triage_issues_found", "INFO",
+            total=len(issues),
+            pending=len(pending),
+            repo=self._github.repo,
+        )
+
+        if not pending:
+            self._logger.log("triage_no_pending", "INFO",
+                             message="All issues already triaged or no open issues found")
+            return
 
         for issue in issues:
             self._process_issue(issue)
@@ -140,6 +152,13 @@ class TriageAgent:
 
         assessment = self._llm_triage(issue)
         self._post_comment(issue_number, assessment)
+        self._logger.log(
+            "triage_issue_done", "INFO",
+            issue_number=issue_number,
+            title=issue.get("title", "")[:80],
+            priority=assessment["priority"],
+            type=assessment["type"],
+        )
 
     # ------------------------------------------------------------------
     # LLM classification

@@ -228,8 +228,8 @@
       </div>
 
       <div id="coverageRow" style="display:none">
-        <label for="coverageInput">Coverage Report Path</label>
-        <input type="text" id="coverageInput" placeholder="coverage.json" value="coverage.json"/>
+        <label for="coverageInput">Coverage Report Path <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+        <input type="text" id="coverageInput" placeholder="coverage.json (skip if not available)" value="coverage.json"/>
       </div>
 
       <div id="triageHint" style="display:none">
@@ -627,8 +627,15 @@ const EVENT_CHIPS = {
   correction_loop_aborted: ['ABORTED', 'chip-red'],
   dedup_skip:           ['DEDUP', 'chip-yellow'],
   new_error_introduced: ['NEW ERR', 'chip-red'],
-  ruff_check_failed:       ['RUFF ✗',   'chip-red'],
-  max_tokens_truncated:    ['TRUNCATED', 'chip-orange'],
+  ruff_check_failed:       ['RUFF ✗',    'chip-red'],
+  max_tokens_truncated:    ['TRUNCATED',  'chip-orange'],
+  triage_issues_found:     ['ISSUES',     'chip-cyan'],
+  triage_no_pending:       ['ALL DONE',   'chip-green'],
+  triage_skipped_recent:   ['SKIP',       'chip-gray'],
+  triage_issue_done:       ['TRIAGED',    'chip-green'],
+  triage_fetch_failed:     ['FETCH ERR',  'chip-red'],
+  triage_comment_failed:   ['POST ERR',   'chip-red'],
+  github_auth_missing:     ['AUTH ERR',   'chip-red'],
 };
 
 function appendLogCard(parsed) {
@@ -678,6 +685,13 @@ function renderPayload(event, p) {
   if (event === 'correction_loop_aborted') return `<span style="color:var(--red)">Max retries reached — giving up</span>`;
   if (event === 'dedup_skip') return `<span style="color:var(--yellow)">Recent successful run found — skipping. Delete agent_memory.db to force re-run.</span>`;
   if (event === 'new_error_introduced') return `New codes introduced: <span style="color:var(--red)">${(p.new_codes||[]).join(', ')}</span>`;
+  if (event === 'triage_issues_found') return `Repo: <span class="str">${p.repo||''}</span>  Open: <span class="num">${p.total}</span>  Pending: <span class="num">${p.pending}</span>`;
+  if (event === 'triage_no_pending') return `<span style="color:var(--green)">${p.message||'All issues already triaged'}</span>`;
+  if (event === 'triage_skipped_recent') return `Issue <span class="num">#${p.issue_number}</span> already has agent-triaged label`;
+  if (event === 'triage_issue_done') return `Issue <span class="num">#${p.issue_number}</span> — <span class="str">${p.priority}</span> ${p.type}  <span class="key">${(p.title||'').slice(0,60)}</span>`;
+  if (event === 'triage_fetch_failed') return `<span style="color:var(--red)">Failed to fetch issues: ${p.error||''}</span>`;
+  if (event === 'triage_comment_failed') return `<span style="color:var(--red)">Failed to post comment on #${p.issue_number} (HTTP ${p.status_code})</span>`;
+  if (event === 'github_auth_missing') return `<span style="color:var(--red)">${p.message||'GITHUB_TOKEN not set'}</span>`;
   // Generic fallback
   return Object.entries(p).slice(0, 4).map(([k,v]) =>
     `<span class="key">${k}:</span> <span class="str">${String(v).slice(0,80)}</span>`

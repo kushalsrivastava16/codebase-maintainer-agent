@@ -160,12 +160,15 @@ def run_cmd(
         click.echo(f"error: target path does not exist: {target}", err=True)
         sys.exit(1)
 
-    # --- Validate generate_tests requires coverage report ---
-    if task == "generate_tests" and coverage_report is None:
-        click.echo(
-            "error: --coverage-report is required for generate_tests task", err=True
-        )
-        sys.exit(1)
+    # --- Warn (don't fail) if coverage report is missing for generate_tests ---
+    if task == "generate_tests" and coverage_report is not None:
+        if not Path(coverage_report).exists():
+            click.echo(
+                f"warning: coverage report not found at '{coverage_report}' — "
+                "proceeding without coverage context",
+                err=True,
+            )
+            coverage_report = None
 
     # --- Validate triage_issues requires github-repo ---
     if task == "triage_issues" and not github_repo:
