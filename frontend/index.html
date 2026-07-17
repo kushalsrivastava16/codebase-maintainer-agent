@@ -232,9 +232,12 @@
         <input type="text" id="coverageInput" placeholder="coverage.json" value="coverage.json"/>
       </div>
 
-      <div id="triageHint" style="display:none;font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5">
-        Triages open issues on the loaded GitHub repo.<br>
-        Set <code style="color:var(--accent)">GITHUB_TOKEN</code> on the server to post comments.
+      <div id="triageHint" style="display:none">
+        <label for="githubTokenInput">GitHub Token</label>
+        <input type="password" id="githubTokenInput" placeholder="ghp_... (required to post comments)" autocomplete="off"/>
+        <div style="font-size:11px;color:var(--muted);margin-top:5px;line-height:1.5">
+          Needed to post triage comments and apply labels on the repo.
+        </div>
       </div>
 
       <label for="apiKeyInput">Anthropic API Key</label>
@@ -539,6 +542,8 @@ async function runTask() {
       .replace(/^https?:\/\/github\.com\//, '')
       .replace(/\.git$/, '')
       .replace(/\/$/, '');
+    const ghToken = document.getElementById('githubTokenInput').value.trim();
+    if (ghToken) body.github_token = ghToken;
   }
 
   try {
