@@ -220,14 +220,21 @@
         <button class="task-btn" data-task="triage_issues" onclick="selectTask('triage_issues', this)">🏷 Triage</button>
       </div>
 
-      <label for="targetSelect">Target File</label>
-      <select id="targetSelect">
-        <option value="">Loading files...</option>
-      </select>
+      <div id="targetRow">
+        <label for="targetSelect">Target File</label>
+        <select id="targetSelect">
+          <option value="">Loading files...</option>
+        </select>
+      </div>
 
       <div id="coverageRow" style="display:none">
         <label for="coverageInput">Coverage Report Path</label>
         <input type="text" id="coverageInput" placeholder="coverage.json" value="coverage.json"/>
+      </div>
+
+      <div id="triageHint" style="display:none;font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5">
+        Triages open issues on the loaded GitHub repo.<br>
+        Set <code style="color:var(--accent)">GITHUB_TOKEN</code> on the server to post comments.
       </div>
 
       <label for="apiKeyInput">Anthropic API Key</label>
@@ -477,14 +484,27 @@ function selectTask(task, btn) {
   if (btn) btn.classList.add('active');
   document.getElementById('coverageRow').style.display =
     task === 'generate_tests' ? 'block' : 'none';
+  document.getElementById('triageHint').style.display =
+    task === 'triage_issues' ? 'block' : 'none';
+  document.getElementById('targetRow').style.display =
+    task === 'triage_issues' ? 'none' : 'block';
 }
 
 // ---------------------------------------------------------------------------
 // Run task
 // ---------------------------------------------------------------------------
 async function runTask() {
-  const target = document.getElementById('targetSelect').value;
-  if (!target) { alert('Please select a target file'); return; }
+  let target;
+  if (currentTask === 'triage_issues') {
+    if (!currentRepoUrl) {
+      alert('Please load a GitHub repository first (enter a https://github.com/owner/repo URL above and click Load)');
+      return;
+    }
+    target = '.';
+  } else {
+    target = document.getElementById('targetSelect').value;
+    if (!target) { alert('Please select a target file'); return; }
+  }
 
   // Clear log stream
   const stream = document.getElementById('logStream');
@@ -512,6 +532,13 @@ async function runTask() {
   else if (currentRepoPath) body.repo_path = currentRepoPath;
   if (currentTask === 'generate_tests') {
     body.coverage_report = document.getElementById('coverageInput').value || 'coverage.json';
+  }
+  if (currentTask === 'triage_issues' && currentRepoUrl) {
+    // Derive "owner/repo" from the already-loaded GitHub URL
+    body.github_repo = currentRepoUrl
+      .replace(/^https?:\/\/github\.com\//, '')
+      .replace(/\.git$/, '')
+      .replace(/\/$/, '');
   }
 
   try {

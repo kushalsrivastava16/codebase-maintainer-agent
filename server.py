@@ -76,9 +76,11 @@ class RunRequest(BaseModel):
     verbose: bool = True
     max_tokens: int | None = None
     coverage_report: str | None = None
-    api_key: str | None = None    # ANTHROPIC_API_KEY, passed to subprocess env
-    repo_path: str | None = None  # absolute local path to a repo
-    repo_url: str | None = None   # GitHub URL — resolved to cloned path at run time
+    api_key: str | None = None         # ANTHROPIC_API_KEY, passed to subprocess env
+    repo_path: str | None = None       # absolute local path to a repo
+    repo_url: str | None = None        # GitHub URL — resolved to cloned path at run time
+    github_repo: str | None = None     # "owner/repo" — required for triage_issues
+    github_token: str | None = None    # GITHUB_TOKEN for triage_issues
 
 
 # ---------------------------------------------------------------------------
@@ -312,6 +314,13 @@ async def run_task(req: RunRequest):
     if req.task not in VALID_TASKS:
         raise HTTPException(400, f"Invalid task: {req.task}")
 
+    # triage_issues requires a GitHub repo slug ("owner/repo")
+    if req.task == "triage_issues":
+        if not req.github_repo:
+            raise HTTPException(400, "github_repo (owner/repo) is required for triage_issues")
+        if "/" not in req.github_repo or req.github_repo.count("/") != 1:
+            raise HTTPException(400, "github_repo must be in 'owner/repo' format")
+
     # Reject absolute paths and path traversal — target must be relative and
     # stay within the repo root (enforced again by FileReader, but fail early here)
     target_path = Path(req.target)
@@ -336,11 +345,16 @@ async def run_task(req: RunRequest):
         cmd += ["--max-tokens", str(req.max_tokens)]
     if req.coverage_report:
         cmd += ["--coverage-report", req.coverage_report]
+    if req.github_repo:
+        cmd += ["--github-repo", req.github_repo]
 
-    # Build extra env — inject API key if provided
-    extra_env: dict | None = None
+    # Build extra env — inject API key and GitHub token if provided
+    extra_env: dict = {}
     if req.api_key:
-        extra_env = {"ANTHROPIC_API_KEY": req.api_key}
+        extra_env["ANTHROPIC_API_KEY"] = req.api_key
+    if req.github_token:
+        extra_env["GITHUB_TOKEN"] = req.github_token
+    extra_env = extra_env or None
 
     # Resolve cwd: repo_url (cloned) > repo_path (local) > this project
     cwd: str | None = None
