@@ -209,6 +209,10 @@ class Orchestrator:
                 if proposed and self._original_content:
                     # --- Self-correction: verify with ruff before accepting ---
                     if self._ruff_available:
+                        # First pass: apply ruff's own safe auto-fixes so the LLM
+                        # doesn't need to handle trivially machine-fixable issues
+                        # (F401 unused imports, F841 unused vars, etc.).
+                        proposed = self._apply_ruff_fixes(proposed, target_path)
                         ruff_output, current_codes = self._check_proposed_content(
                             proposed, target_path
                         )
@@ -408,6 +412,35 @@ class Orchestrator:
         if self._memory is not None:
             self._memory.update_status(task_id, "failed", None)
         raise SystemExit(exit_code)
+
+    def _apply_ruff_fixes(self, content: str, target_path: str) -> str:
+        """
+        Write content to a temp file, run ruff's safe auto-fixes, and return
+        the fixed content.  Handles F401 (unused imports), F841 (unused vars),
+        and many style issues that ruff can fix without human judgment.
+
+        WHY apply ruff fixes before the LLM self-correction check?
+          The LLM often misses trivially machine-fixable violations — it focuses
+          on logic, not formatting minutiae.  Letting ruff handle what ruff knows
+          best means the self-correction loop only fires for things ruff can't fix.
+          If ruff cleans everything, we skip all correction retries entirely.
+        """
+        if not self._ruff_available:
+            return content
+        suffix = Path(target_path).suffix or ".py"
+        try:
+            with tempfile.TemporaryDirectory() as workspace:
+                tmp_file = Path(workspace) / f"proposed{suffix}"
+                tmp_file.write_text(content, encoding="utf-8")
+                # Safe fixes only (no --unsafe-fixes) to avoid surprising changes
+                subprocess.run(
+                    ["ruff", "check", "--fix", str(tmp_file)],
+                    capture_output=True,
+                    text=True,
+                )
+                return tmp_file.read_text(encoding="utf-8")
+        except Exception:
+            return content  # fall back to original if anything goes wrong
 
     def _check_proposed_content(
         self, content: str, target_path: str
