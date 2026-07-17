@@ -46,6 +46,7 @@ AGENT_OUTPUT_DIR.mkdir(exist_ok=True)
 _cloned_repos: dict[str, str] = {}
 _CLONE_BASE = Path(tempfile.gettempdir()) / "agent_repos"
 _CLONE_BASE.mkdir(exist_ok=True)
+_clone_lock = asyncio.Lock()  # prevents concurrent clones of the same URL racing
 
 app = FastAPI(title="Codebase Maintainer Agent", version="1.0.0")
 app.add_middleware(
@@ -200,15 +201,15 @@ async def index():
 async def clone_repo(req: CloneRequest):
     """Clone a public GitHub repository (shallow, depth=1) and return its .py file list.
 
-    Caches the clone for the lifetime of the server process so repeated calls
-    are instant.  Pass refresh=true to force a fresh clone.
+    Caches the clone for the server process lifetime; pass refresh=true to re-clone.
+    Uses an asyncio lock to prevent concurrent requests for the same URL racing on
+    rmtree + git clone.
     """
     url = _normalise_github_url(req.url)
 
     if not (url.startswith("https://github.com/") or url.startswith("http://github.com/")):
         raise HTTPException(400, "Only https://github.com/ URLs are supported")
 
-    # Derive a stable folder name:  owner_repo
     slug = url.replace("https://github.com/", "").replace("http://github.com/", "").strip("/")
     parts = slug.split("/")
     if len(parts) < 2:
@@ -217,28 +218,41 @@ async def clone_repo(req: CloneRequest):
     folder_name = f"{parts[0]}_{parts[1]}"
     target = _CLONE_BASE / folder_name
 
-    # Return cached clone unless caller wants a refresh
+    # Fast-path: serve from cache without acquiring the lock
     if not req.refresh and url in _cloned_repos and Path(_cloned_repos[url]).exists():
         files = _list_py_files(Path(_cloned_repos[url]))
         return {"files": files, "repo_root": _cloned_repos[url], "cached": True, "repo_name": folder_name}
 
-    # Remove stale directory if present
-    if target.exists():
-        shutil.rmtree(target, ignore_errors=True)
-
     if shutil.which("git") is None:
         raise HTTPException(500, "git is not available on this server")
 
-    result = subprocess.run(
-        ["git", "clone", "--depth=1", url, str(target)],
-        capture_output=True,
-        text=True,
-        timeout=120,
-    )
-    if result.returncode != 0:
-        raise HTTPException(400, f"Clone failed: {result.stderr.strip()[:400]}")
+    async with _clone_lock:
+        # Re-check cache after acquiring lock in case another request just finished
+        if not req.refresh and url in _cloned_repos and Path(_cloned_repos[url]).exists():
+            files = _list_py_files(Path(_cloned_repos[url]))
+            return {"files": files, "repo_root": _cloned_repos[url], "cached": True, "repo_name": folder_name}
 
-    _cloned_repos[url] = str(target)
+        if target.exists():
+            shutil.rmtree(target, ignore_errors=True)
+
+        result = subprocess.run(
+            ["git", "clone", "--depth=1", "--single-branch",
+             "--filter=blob:limit=10m", url, str(target)],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode != 0:
+            err = result.stderr.strip()
+            # Surface common errors with a clear message
+            if "Repository not found" in err or "not found" in err.lower():
+                raise HTTPException(404, "Repository not found or is private")
+            if "rate limit" in err.lower():
+                raise HTTPException(429, "GitHub rate limit hit — try again in a minute")
+            raise HTTPException(400, f"Clone failed: {err[:400]}")
+
+        _cloned_repos[url] = str(target)
+
     files = _list_py_files(target)
     return {"files": files, "repo_root": str(target), "cached": False, "repo_name": folder_name}
 
@@ -283,8 +297,11 @@ async def list_diffs():
 
 @app.get("/api/diff")
 async def get_diff(name: str = Query(...)):
-    path = AGENT_OUTPUT_DIR / name
-    if not path.exists() or not path.suffix == ".diff":
+    # Resolve and check the path is within AGENT_OUTPUT_DIR to prevent traversal
+    path = (AGENT_OUTPUT_DIR / name).resolve()
+    if not path.is_relative_to(AGENT_OUTPUT_DIR.resolve()):
+        raise HTTPException(400, "Invalid diff name")
+    if not path.exists() or path.suffix != ".diff":
         raise HTTPException(404, "Diff not found")
     return {"content": path.read_text(encoding="utf-8")}
 
@@ -295,12 +312,23 @@ async def run_task(req: RunRequest):
     if req.task not in VALID_TASKS:
         raise HTTPException(400, f"Invalid task: {req.task}")
 
+    # Reject absolute paths and path traversal — target must be relative and
+    # stay within the repo root (enforced again by FileReader, but fail early here)
+    target_path = Path(req.target)
+    if target_path.is_absolute():
+        raise HTTPException(400, "target must be a relative path, not absolute")
+    if any(part == ".." for part in target_path.parts):
+        raise HTTPException(400, "target path cannot contain '..'")
+
     run_id = str(uuid.uuid4())
 
     cmd = [
         sys.executable, "-m", "agent", "run",
         "--task", req.task,
         "--target", req.target,
+        # Always use the project's own agent_config.yaml, not one that may exist
+        # inside a cloned repo (which could override model, max_iterations, etc.)
+        "--config", str(BASE_DIR / "agent_config.yaml"),
     ]
     if req.verbose:
         cmd.append("--verbose")

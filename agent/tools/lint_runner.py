@@ -62,17 +62,18 @@ class LintRunner:
             )
 
         target = inputs.get("path", "")
+        if not target:
+            return ToolResult(is_error=True, content="lint_error: path argument is required")
+
         output_lines: list[str] = []
 
-        # Run ruff check (style violations: unused imports, undefined names, etc.)
-        # ruff check exit codes:
-        #   0 = no violations
-        #   1 = violations found
-        #   2 = internal error or invalid usage
+        # ruff check — style violations (unused imports, undefined names, etc.)
+        # Exit: 0 = clean, 1 = violations, 2 = internal error
         check_result = subprocess.run(
             ["ruff", "check", target],
             capture_output=True,
             text=True,
+            timeout=60,
         )
         if check_result.returncode not in (0, 1):
             return ToolResult(
@@ -85,15 +86,14 @@ class LintRunner:
         if check_result.stdout.strip():
             output_lines.append(check_result.stdout.strip())
 
-        # Run ruff format --check (formatting violations: indentation, line length, etc.)
-        # ruff format --check exit codes:
-        #   0 = no formatting changes needed
-        #   1 = formatting changes would be made
-        #   2 = internal error
+        # ruff format --diff — shows the exact formatting changes needed as a diff
+        # so the LLM knows precisely what to reformat (not just "file would change").
+        # Exit: 0 = already formatted, 1 = changes needed, 2 = internal error
         fmt_result = subprocess.run(
-            ["ruff", "format", "--check", target],
+            ["ruff", "format", "--diff", target],
             capture_output=True,
             text=True,
+            timeout=60,
         )
         if fmt_result.returncode not in (0, 1):
             return ToolResult(
@@ -104,10 +104,9 @@ class LintRunner:
                 ),
             )
         if fmt_result.stdout.strip():
-            output_lines.append(fmt_result.stdout.strip())
+            output_lines.append("formatting diff:\n" + fmt_result.stdout.strip())
 
         if not output_lines:
-            # Both commands reported clean — tell the LLM nothing needs fixing
             return ToolResult(is_error=False, content="lint_clean: no violations found")
 
         return ToolResult(is_error=False, content="\n".join(output_lines))

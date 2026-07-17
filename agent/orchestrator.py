@@ -54,8 +54,9 @@ from agent.diff_writer import DiffWriter
 from agent.logger import StructuredLogger
 from agent.protocols import OrchestratorProtocol, TaskResult, Tool, ToolResult, TokenUsage
 
-# Regex to extract a Python code block from the LLM's final response.
-CODE_BLOCK_PATTERN = re.compile(r"```(?:python)?\n(.*?)```", re.DOTALL)
+# Match any fenced code block: ```python, ```py, ```python3, or bare ```.
+# re.DOTALL so the (.*?) captures newlines inside the block.
+CODE_BLOCK_PATTERN = re.compile(r"```\w*\s*\n(.*?)```", re.DOTALL)
 
 # Regex to extract ruff error codes like E501, F401, W291, etc.
 RUFF_CODE_PATTERN = re.compile(r'\b([A-Z]\d{3,4})\b')
@@ -90,7 +91,10 @@ class Orchestrator:
         self._original_content = original_content  # content before any changes
         self._memory = memory  # MemoryStore, optional
         self._sandbox = sandbox  # Sandbox, optional — used when config.sandbox_enabled=True
-        self._client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from env
+        try:
+            self._client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from env
+        except anthropic.AuthenticationError as exc:
+            raise RuntimeError(f"anthropic_auth_error: {exc}") from exc
         self._ruff_available = shutil.which("ruff") is not None
 
     def run(self, task_type: str, target_path: str) -> TaskResult:
@@ -173,6 +177,7 @@ class Orchestrator:
                 system=system_prompt,
                 tools=active_tools if active_tools else anthropic.NOT_GIVEN,
                 messages=messages,
+                timeout=120,  # prevent indefinite hang on network failure
             )
 
             # Record token usage (budget check happens at top of next iteration)
@@ -328,7 +333,12 @@ class Orchestrator:
                             "is_error": tool_result.is_error,
                         })
 
-                messages.append({"role": "user", "content": tool_results})
+                if not tool_results:
+                    # API returned tool_use but no tool blocks — log and skip
+                    self._logger.log("empty_tool_use", "WARNING",
+                                     task_id=task_id, iteration=iteration)
+                else:
+                    messages.append({"role": "user", "content": tool_results})
 
             elif response.stop_reason == "max_tokens":
                 # Response was cut off mid-output (file too large for one turn).
@@ -437,58 +447,60 @@ class Orchestrator:
 
     def _apply_ruff_fixes(self, content: str, target_path: str) -> str:
         """
-        Write content to a temp file, run ruff's safe auto-fixes, and return
-        the fixed content.  Handles F401 (unused imports), F841 (unused vars),
-        and many style issues that ruff can fix without human judgment.
+        Write content to a temp file beside the real target (so ruff discovers
+        the repo's own pyproject.toml / ruff.toml config), run ruff's auto-fixes,
+        and return the fixed content.
 
-        WHY apply ruff fixes before the LLM self-correction check?
-          The LLM often misses trivially machine-fixable violations — it focuses
-          on logic, not formatting minutiae.  Letting ruff handle what ruff knows
-          best means the self-correction loop only fires for things ruff can't fix.
-          If ruff cleans everything, we skip all correction retries entirely.
+        WHY write the temp file beside the real target?
+          ruff discovers config by walking up the directory tree from the file
+          being checked. Writing to a system temp dir means ruff finds no config
+          and applies defaults, which may differ from the repo's rules — producing
+          false violations and unnecessary correction retries.
         """
         if not self._ruff_available:
             return content
         suffix = Path(target_path).suffix or ".py"
+        target_dir = Path(target_path).resolve().parent
+        tmp_file = target_dir / f"._ruff_tmp_{uuid4().hex}{suffix}"
         try:
-            with tempfile.TemporaryDirectory() as workspace:
-                tmp_file = Path(workspace) / f"proposed{suffix}"
-                tmp_file.write_text(content, encoding="utf-8")
-                # Apply safe fixes first, then unsafe fixes.
-                # F841 (unused local variable) is marked "unsafe" because ruff
-                # cannot prove the RHS has no side effects, but for dead
-                # assignments like `x = 42` it is always safe to remove.
-                subprocess.run(
-                    ["ruff", "check", "--fix", "--unsafe-fixes", str(tmp_file)],
-                    capture_output=True,
-                    text=True,
-                )
+            tmp_file.write_text(content, encoding="utf-8")
+            result = subprocess.run(
+                ["ruff", "check", "--fix", "--unsafe-fixes", str(tmp_file)],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            # Only accept the output if ruff exited cleanly (0 = fixed, 1 = some remain)
+            if result.returncode in (0, 1):
                 return tmp_file.read_text(encoding="utf-8")
+            return content  # ruff internal error — return content unmodified
         except Exception:
-            return content  # fall back to original if anything goes wrong
+            return content
+        finally:
+            tmp_file.unlink(missing_ok=True)
 
     def _check_proposed_content(
         self, content: str, target_path: str
     ) -> tuple[str, set[str]]:
         """
-        Write content to a temp file and run ruff check on it.
+        Write content to a temp file beside the real target and run ruff check.
 
-        When sandbox_enabled and a Sandbox instance is available, runs ruff
-        inside the Docker container so LLM-generated code never executes on host.
+        Writing next to the target (rather than to a system temp dir) ensures
+        ruff picks up the repo's own config file, so the check uses the same
+        rules as the original lint run.
 
-        Returns (ruff_output, set_of_error_codes).
-        Empty ruff_output means the proposed content is clean.
+        Returns (ruff_output, set_of_error_codes).  Empty codes = clean.
         """
         suffix = Path(target_path).suffix or ".py"
-        with tempfile.TemporaryDirectory() as workspace:
-            tmp_file = Path(workspace) / f"proposed{suffix}"
+        target_dir = Path(target_path).resolve().parent
+        tmp_file = target_dir / f"._ruff_check_{uuid4().hex}{suffix}"
+        try:
             tmp_file.write_text(content, encoding="utf-8")
 
             if self._config.sandbox_enabled and self._sandbox is not None:
-                # Run ruff inside Docker with the workspace mounted
                 result = self._sandbox.run(
-                    command=["ruff", "check", f"/workspace/proposed{suffix}"],
-                    workspace_dir=workspace,
+                    command=["ruff", "check", str(tmp_file)],
+                    workspace_dir=str(target_dir),
                 )
                 output = result.content
             else:
@@ -496,8 +508,14 @@ class Orchestrator:
                     ["ruff", "check", str(tmp_file)],
                     capture_output=True,
                     text=True,
+                    timeout=30,
                 )
                 output = proc.stdout
+
+            # Replace the temp filename with the original in any output messages
+            output = output.replace(str(tmp_file), str(target_path))
+        finally:
+            tmp_file.unlink(missing_ok=True)
 
         codes = set(RUFF_CODE_PATTERN.findall(output))
         return output, codes

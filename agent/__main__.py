@@ -263,7 +263,7 @@ def run_cmd(
     # Pass the original --target string (relative path) to the orchestrator so
     # the system prompt and tool calls stay clean. canonical_target (absolute)
     # is only used for memory dedup and diff metadata.
-    result = orchestrator.run(task, target)
+    result = orchestrator.run(task, canonical_target)
 
     logger.log("run_complete", "INFO",
                status=result.status,

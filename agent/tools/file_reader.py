@@ -32,11 +32,11 @@ MAX_FILE_BYTES: int = 100 * 1024  # 100 KB
 # could confuse the model into treating the file as part of the system prompt
 # or a different conversation turn.
 INJECTION_PATTERNS: list[re.Pattern] = [
-    re.compile(r'\[INST\]'),           # LLaMA-2 / Mistral instruction tag
-    re.compile(r'</s>'),               # LLaMA/Mistral end-of-sequence
-    re.compile(r'<s>'),                # LLaMA/Mistral start-of-sequence
-    re.compile(r'###'),                # Alpaca-style instruction delimiter
-    re.compile(r'Human:'),             # Claude/RLHF human-turn injection
+    re.compile(r'\[INST\]'),                  # LLaMA-2 / Mistral instruction tag
+    re.compile(r'^Human:\s', re.MULTILINE),   # Claude/RLHF human-turn injection (line-start only)
+    # NOT stripping: ###, <s>, </s> — these appear legitimately in Python
+    # section dividers, Sphinx math RST, and XML/HTML docstrings and would
+    # corrupt the source code the LLM is asked to fix.
 ]
 
 
