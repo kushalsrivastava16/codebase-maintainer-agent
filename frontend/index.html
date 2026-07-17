@@ -595,7 +595,8 @@ const EVENT_CHIPS = {
   correction_loop_aborted: ['ABORTED', 'chip-red'],
   dedup_skip:           ['DEDUP', 'chip-yellow'],
   new_error_introduced: ['NEW ERR', 'chip-red'],
-  ruff_check_failed:    ['RUFF ✗', 'chip-red'],
+  ruff_check_failed:       ['RUFF ✗',   'chip-red'],
+  max_tokens_truncated:    ['TRUNCATED', 'chip-orange'],
 };
 
 function appendLogCard(parsed) {

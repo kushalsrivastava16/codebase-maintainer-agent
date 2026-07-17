@@ -169,7 +169,7 @@ class Orchestrator:
             active_tools = [] if in_correction else tool_defs
             response = self._client.messages.create(
                 model=self._config.model,
-                max_tokens=4096,
+                max_tokens=16384,
                 system=system_prompt,
                 tools=active_tools if active_tools else anthropic.NOT_GIVEN,
                 messages=messages,
@@ -329,6 +329,25 @@ class Orchestrator:
                         })
 
                 messages.append({"role": "user", "content": tool_results})
+
+            elif response.stop_reason == "max_tokens":
+                # Response was cut off mid-output (file too large for one turn).
+                # Ask the LLM to restart and provide the complete file from scratch
+                # rather than continuing a partial code block, which would produce
+                # malformed output that _extract_code_block cannot parse.
+                self._logger.log("max_tokens_truncated", "WARNING",
+                                 task_id=task_id,
+                                 iteration=iteration,
+                                 output_tokens=response.usage.output_tokens if response.usage else 0)
+                in_correction = True
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        "Your previous response was cut off before you finished the file. "
+                        "Please start over and return the COMPLETE fixed file in a single "
+                        "```python code block — do not split it across messages."
+                    ),
+                })
 
             else:
                 # Unexpected stop reason — treat as an iteration and continue
