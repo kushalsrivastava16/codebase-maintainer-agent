@@ -338,6 +338,10 @@ async def run_task(req: RunRequest):
         # Always use the project's own agent_config.yaml, not one that may exist
         # inside a cloned repo (which could override model, max_iterations, etc.)
         "--config", str(BASE_DIR / "agent_config.yaml"),
+        # Pin output-dir and memory-db to absolute project paths so diffs and
+        # dedup records land in the right place even when cwd is a cloned repo.
+        "--output-dir", str(AGENT_OUTPUT_DIR),
+        "--memory-db", str(MEMORY_DB),
     ]
     if req.verbose:
         cmd.append("--verbose")

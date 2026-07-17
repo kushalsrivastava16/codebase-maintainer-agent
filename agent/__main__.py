@@ -132,6 +132,11 @@ def cli() -> None:
     help="Override output directory for diffs.",
 )
 @click.option(
+    "--memory-db",
+    default=None,
+    help="Override SQLite memory DB path.",
+)
+@click.option(
     "--github-repo",
     default=None,
     help="GitHub repository in 'owner/repo' format (required for triage_issues).",
@@ -145,6 +150,7 @@ def run_cmd(
     verbose: bool,
     config: str,
     output_dir: str | None,
+    memory_db: str | None,
     github_repo: str | None,
 ) -> None:
     """Run a single maintenance task against a repository file or directory."""
@@ -181,6 +187,8 @@ def run_cmd(
         cli_overrides["sandbox_enabled"] = True
     if output_dir is not None:
         cli_overrides["output_dir"] = output_dir
+    if memory_db is not None:
+        cli_overrides["memory_db"] = memory_db
     if github_repo is not None:
         cli_overrides["github_repo"] = github_repo
 
