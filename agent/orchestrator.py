@@ -218,6 +218,9 @@ class Orchestrator:
                         )
 
                         if ruff_output.strip():  # still has violations
+                            self._logger.log("ruff_check_failed", "WARNING",
+                                             task_id=task_id,
+                                             violations=ruff_output.strip()[:500])
                             # Detect new error codes introduced by this fix
                             if original_violation_codes is None:
                                 _, original_violation_codes = self._get_file_ruff_codes(
