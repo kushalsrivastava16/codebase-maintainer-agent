@@ -235,7 +235,30 @@ def run_cmd(
             sys.exit(1)
         raise
 
-    # --- Optional sandbox (Task 26: sandbox integration into correction loop) ---
+    # --- Triage: bypass orchestrator, call TriageAgent directly ---
+    # TriageAgent handles its own fetch → classify → post-comment → label loop.
+    # Routing triage through the orchestrator causes the LLM to call the GitHub
+    # tool with wrong parameters and skips the structured triage logic entirely.
+    if task == "triage_issues":
+        from agent.triage import TriageAgent
+        github_client = tools.get("github")
+        if not github_client:
+            logger.log("triage_config_error", "ERROR",
+                       message="GitHub client could not be created — check GITHUB_TOKEN")
+            sys.exit(1)
+        logger.log("run_start", "INFO",
+                   task_type=task, target=target, model=agent_config.model)
+        triage = TriageAgent(
+            github_client=github_client,
+            logger=logger,
+            model=agent_config.model,
+        )
+        triage.run()
+        logger.log("run_complete", "INFO",
+                   status="success", output_path=None, total_tokens=0, estimated_usd=0.0)
+        sys.exit(0)
+
+    # --- Optional sandbox ---
     sandbox = None
     if agent_config.sandbox_enabled:
         from agent.sandbox import Sandbox
@@ -260,9 +283,6 @@ def run_cmd(
     logger.log("run_start", "INFO",
                task_type=task, target=target, model=agent_config.model)
 
-    # Pass the original --target string (relative path) to the orchestrator so
-    # the system prompt and tool calls stay clean. canonical_target (absolute)
-    # is only used for memory dedup and diff metadata.
     result = orchestrator.run(task, canonical_target)
 
     logger.log("run_complete", "INFO",
