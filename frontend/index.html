@@ -197,13 +197,18 @@
     <!-- Repository selector -->
     <div class="sidebar-section">
       <h3>Repository</h3>
-      <label for="repoPathInput">Path on server (leave blank for this project)</label>
+      <label for="repoInput">GitHub URL or leave blank for this project</label>
       <div style="display:flex;gap:6px;align-items:center">
-        <input type="text" id="repoPathInput" placeholder="/absolute/path/to/repo" style="flex:1"
-               onkeydown="if(event.key==='Enter')applyRepoPath()"/>
-        <button class="task-btn" style="white-space:nowrap;padding:7px 10px;margin-top:0" onclick="applyRepoPath()" title="Load files from this path">↺</button>
+        <input type="text" id="repoInput" placeholder="https://github.com/owner/repo" style="flex:1"
+               onkeydown="if(event.key==='Enter')loadRepo()"/>
+        <button class="task-btn" id="cloneBtn" style="white-space:nowrap;padding:7px 10px;margin-top:0"
+                onclick="loadRepo()" title="Clone / load repository">Load</button>
       </div>
       <div id="repoStatus" style="font-size:11px;margin-top:5px;color:var(--muted);font-family:var(--font-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+      <button id="repoRefreshBtn" onclick="loadRepo(true)"
+              style="display:none;margin-top:6px;font-size:11px;background:none;border:none;color:var(--muted);cursor:pointer;padding:0;text-decoration:underline">
+        ↺ Re-clone (pull latest)
+      </button>
     </div>
 
     <div class="sidebar-section">
@@ -296,7 +301,8 @@
 
 <script>
 let currentTask = 'lint_fix';
-let currentRepoPath = '';   // '' = this project; absolute path = external repo
+let currentRepoPath = '';   // local path, or ''
+let currentRepoUrl  = '';   // github URL, or ''
 let activeEventSource = null;
 let lastStats = { tokens: 0, cost: 0, calls: 0 };
 
@@ -308,15 +314,70 @@ async function init() {
 }
 
 // ---------------------------------------------------------------------------
-// Repository path
+// Repository — GitHub clone or local path
 // ---------------------------------------------------------------------------
-async function applyRepoPath() {
-  currentRepoPath = document.getElementById('repoPathInput').value.trim();
-  await loadFiles();
+async function loadRepo(refresh = false) {
+  const input = document.getElementById('repoInput').value.trim();
+  const statusEl = document.getElementById('repoStatus');
+  const cloneBtn = document.getElementById('cloneBtn');
+  const refreshBtn = document.getElementById('repoRefreshBtn');
+
+  // Reset state
+  currentRepoPath = '';
+  currentRepoUrl  = '';
+
+  if (!input) {
+    // Blank → use this project
+    statusEl.style.color = 'var(--muted)';
+    statusEl.textContent = '';
+    refreshBtn.style.display = 'none';
+    await loadFiles();
+    return;
+  }
+
+  const isGitHub = input.startsWith('https://github.com/') || input.startsWith('http://github.com/');
+
+  if (isGitHub) {
+    // Clone flow
+    cloneBtn.disabled = true;
+    cloneBtn.textContent = 'Cloning…';
+    statusEl.style.color = 'var(--yellow)';
+    statusEl.textContent = 'Cloning repository…';
+
+    try {
+      const r = await fetch('/api/clone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: input, refresh }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        statusEl.style.color = 'var(--red)';
+        statusEl.textContent = `Error: ${data.detail}`;
+        return;
+      }
+      currentRepoUrl = input;
+      statusEl.style.color = 'var(--green)';
+      statusEl.textContent = `${data.cached ? 'Cached' : 'Cloned'}: ${data.repo_name}  (${data.files.length} .py files)`;
+      refreshBtn.style.display = 'block';
+      populateFileSelect(data.files, false);
+    } catch(e) {
+      statusEl.style.color = 'var(--red)';
+      statusEl.textContent = `Error: ${e.message}`;
+    } finally {
+      cloneBtn.disabled = false;
+      cloneBtn.textContent = 'Load';
+    }
+  } else {
+    // Local path flow (Option C fallback)
+    currentRepoPath = input;
+    refreshBtn.style.display = 'none';
+    await loadFiles();
+  }
 }
 
 // ---------------------------------------------------------------------------
-// File loader
+// File loader (used for this project + local paths)
 // ---------------------------------------------------------------------------
 async function loadFiles() {
   const statusEl = document.getElementById('repoStatus');
@@ -333,20 +394,23 @@ async function loadFiles() {
     }
     const { files, repo_root } = await r.json();
     statusEl.style.color = 'var(--muted)';
-    statusEl.textContent = `Root: ${repo_root}`;
-    const sel = document.getElementById('targetSelect');
-    sel.innerHTML = files.length
-      ? files.map(f => `<option value="${f}">${f}</option>`).join('')
-      : '<option value="">No .py files found</option>';
-    // Default to the lint errors fixture for the built-in project
-    if (!currentRepoPath) {
-      const def = files.find(f => f.includes('utils_with_lint_errors'));
-      if (def) sel.value = def;
-    }
+    statusEl.textContent = currentRepoPath ? `Root: ${repo_root}` : '';
+    populateFileSelect(files, !currentRepoPath);
   } catch(e) {
     statusEl.style.color = 'var(--red)';
     statusEl.textContent = `Error: ${e.message}`;
     document.getElementById('targetSelect').innerHTML = '<option>Error loading files</option>';
+  }
+}
+
+function populateFileSelect(files, defaultToFixture) {
+  const sel = document.getElementById('targetSelect');
+  sel.innerHTML = files.length
+    ? files.map(f => `<option value="${f}">${f}</option>`).join('')
+    : '<option value="">No .py files found</option>';
+  if (defaultToFixture) {
+    const def = files.find(f => f.includes('utils_with_lint_errors'));
+    if (def) sel.value = def;
   }
 }
 
@@ -444,7 +508,8 @@ async function runTask() {
   const body = { task: currentTask, target, verbose: true };
   const apiKey = document.getElementById('apiKeyInput').value.trim();
   if (apiKey) body.api_key = apiKey;
-  if (currentRepoPath) body.repo_path = currentRepoPath;
+  if (currentRepoUrl)  body.repo_url  = currentRepoUrl;
+  else if (currentRepoPath) body.repo_path = currentRepoPath;
   if (currentTask === 'generate_tests') {
     body.coverage_report = document.getElementById('coverageInput').value || 'coverage.json';
   }
