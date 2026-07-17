@@ -217,7 +217,7 @@ class Orchestrator:
                             proposed, target_path
                         )
 
-                        if ruff_output.strip():  # still has violations
+                        if current_codes:  # still has violations (empty = ruff clean)
                             self._logger.log("ruff_check_failed", "WARNING",
                                              task_id=task_id,
                                              violations=ruff_output.strip()[:500])
