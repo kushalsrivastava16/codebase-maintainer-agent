@@ -320,7 +320,9 @@ let lastStats = { tokens: 0, cost: 0, calls: 0 };
 // Init
 // ---------------------------------------------------------------------------
 async function init() {
-  await Promise.all([loadFiles(), loadHistory(), refreshDiffs()]);
+  document.getElementById('targetSelect').innerHTML =
+    '<option value="">— load a repository first —</option>';
+  await Promise.all([loadHistory(), refreshDiffs()]);
 }
 
 // ---------------------------------------------------------------------------
