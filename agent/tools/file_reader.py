@@ -88,6 +88,8 @@ class FileReader:
         # --- Existence and permission checks ---
         if not resolved.exists():
             return ToolResult(is_error=True, content=f"file_not_found: {raw_path}")
+        if resolved.is_dir():
+            return ToolResult(is_error=True, content=f"is_a_directory: {raw_path} — provide a file path, not a directory")
 
         try:
             raw_bytes: bytes = resolved.read_bytes()
