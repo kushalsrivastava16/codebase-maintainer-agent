@@ -226,8 +226,12 @@ def run_cmd(
         sys.exit(0)
 
     # --- Read original file content for diff generation ---
+    # generate_tests produces a NEW test file, not a modification of the source.
+    # Using the source file as original_content would create a nonsensical diff
+    # (source code → test code). Empty string makes DiffWriter show the generated
+    # tests as pure additions, which is the correct representation.
     original_content = ""
-    if target_path.is_file():
+    if target_path.is_file() and task != "generate_tests":
         try:
             original_content = target_path.read_text(encoding="utf-8", errors="replace")
         except OSError as exc:

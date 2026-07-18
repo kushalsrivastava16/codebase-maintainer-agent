@@ -211,7 +211,7 @@ class Orchestrator:
                 full_text = self._extract_text(response.content)
                 proposed = self._extract_code_block(full_text)
 
-                if proposed and self._original_content:
+                if proposed:
                     # --- Self-correction: verify with ruff before accepting ---
                     if self._ruff_available:
                         # First pass: apply ruff's own safe auto-fixes so the LLM
